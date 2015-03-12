@@ -84,6 +84,7 @@ create_file_menu (void)
     entries = g_list_prepend (entries, menu_separator_create ());
     entries = g_list_prepend (entries, menu_entry_create (_("A&bout..."), CK_About));
     entries = g_list_prepend (entries, menu_separator_create ());
+    entries = g_list_prepend (entries, menu_entry_create (_("&Test"), CK_Test));
     entries = g_list_prepend (entries, menu_entry_create (_("&Quit"), CK_Quit));
 
     return g_list_reverse (entries);

@@ -864,6 +864,9 @@ help_execute_cmd (unsigned long command)
 
     switch (command)
     {
+    case CK_Test:
+        help_help (whelp);
+        break;
     case CK_Help:
         help_help (whelp);
         break;

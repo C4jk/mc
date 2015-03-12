@@ -208,7 +208,7 @@ static name_keymap_t command_names[] = {
     {"PutCurrentTagged", CK_PutCurrentTagged},
     {"PutOtherTagged", CK_PutOtherTagged},
     {"Select", CK_Select},
-    {"Unselect", CK_Unselect},
+    {"Unselect", CK_Unselect},   
 
     /* panel */
     {"SelectExt", CK_SelectExt},
@@ -255,6 +255,7 @@ static name_keymap_t command_names[] = {
 #endif
 
 #ifdef USE_INTERNAL_EDIT
+    {"Test", CK_Test},
     {"Close", CK_Close},
     {"Tab", CK_Tab},
     {"Undo", CK_Undo},

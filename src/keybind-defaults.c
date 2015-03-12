@@ -115,6 +115,8 @@ static const global_keymap_ini_t default_main_keymap[] = {
     {"PanelListingSwitch", "alt-t"},
     /* Swap panels */
     {"Swap", "ctrl-u"},
+    /* TEST */
+    {"Test", "NO KEY"},
     /* Resize panels */
     {"SplitEqual", "alt-equal"},
     {"SplitMore", "alt-shift-right"},

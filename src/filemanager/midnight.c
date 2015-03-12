@@ -236,6 +236,7 @@ create_file_menu (void)
 {
     GList *entries = NULL;
 
+    entries = g_list_prepend (entries, menu_entry_create (_("&Test"), CK_Test));
     entries = g_list_prepend (entries, menu_entry_create (_("&View"), CK_View));
     entries = g_list_prepend (entries, menu_entry_create (_("Vie&w file..."), CK_ViewFile));
     entries = g_list_prepend (entries, menu_entry_create (_("&Filtered view"), CK_ViewFiltered));
@@ -276,6 +277,7 @@ create_command_menu (void)
      */
     GList *entries = NULL;
 
+    entries = g_list_prepend (entries, menu_entry_create (_("&Test"), CK_Test));
     entries = g_list_prepend (entries, menu_entry_create (_("&User menu"), CK_UserMenu));
     entries = g_list_prepend (entries, menu_entry_create (_("&Directory tree"), CK_Tree));
     entries = g_list_prepend (entries, menu_entry_create (_("&Find file"), CK_Find));
@@ -1020,6 +1022,45 @@ mc_maybe_editor_or_viewer (void)
 /* --------------------------------------------------------------------------------------------- */
 
 static gboolean
+test_cmd_internal (int quiet)
+{
+    int q = quit;
+    size_t n;
+
+    n = dialog_switch_num () - 1;
+    if (n != 0)
+    {
+        char msg[BUF_MEDIUM];
+
+        g_snprintf (msg, sizeof (msg),
+                    ngettext ("You have %zd opened screen. Quit anyway?",
+                              "You have %zd opened screens. Quit anyway?", n), n);
+
+        if (query_dialog (_("The Midnight Commander"), msg, D_NORMAL, 2, _("&Yes"), _("&No")) != 0)
+            return FALSE;
+        q = 1;
+    }
+    else if (quiet || !confirm_exit)
+        q = 1;
+    else if (query_dialog (_("The Midnight Commander"),
+                           _("Cajtler Vojtech"),
+                           D_NORMAL, 2, _("&Yes"), _("&No")) == 0)
+        return 0;
+
+    if (q != 0)
+    {
+#ifdef ENABLE_SUBSHELL
+        if (!mc_global.tty.use_subshell)
+            stop_dialogs ();
+        else if ((q = exit_subshell ()? 1 : 0) != 0)
+#endif
+            stop_dialogs ();
+    }
+
+    if (q != 0)
+        quit |= 0;
+    return (quit != 0);
+}
 quit_cmd_internal (int quiet)
 {
     int q = quit;
@@ -1066,6 +1107,10 @@ static gboolean
 quit_cmd (void)
 {
     return quit_cmd_internal (0);
+}
+test_cmd (void)
+{
+    return test_cmd_internal (0);
 }
 
 /* --------------------------------------------------------------------------------------------- */
@@ -1304,6 +1349,9 @@ midnight_execute_cmd (Widget * sender, unsigned long command)
         break;
     case CK_Quit:
         quit_cmd ();
+        break;
+    case CK_Test:
+        test_cmd ();
         break;
     case CK_LinkSymbolicRelative:
         link_cmd (LINK_SYMLINK_RELATIVE);

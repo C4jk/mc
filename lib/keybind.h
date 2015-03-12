@@ -66,6 +66,7 @@ enum
     CK_ChangeOwn,
     CK_ChangeOwnAdvanced,
     CK_Remove,
+    CK_Test,
     CK_BackSpace,
     CK_Redo,
     CK_Clear,
