@@ -2,7 +2,7 @@
    Internal file viewer for the Midnight Commander
    Function for plain view
 
-   Copyright (C) 1994-2014
+   Copyright (C) 1994-2015
    Free Software Foundation, Inc.
 
    Written by:
@@ -162,6 +162,12 @@
 
 /*** file scope macro definitions ****************************************************************/
 
+#if GLIB_CHECK_VERSION (2, 30, 0)
+#define SPACING_MARK G_UNICODE_SPACING_MARK
+#else
+#define SPACING_MARK G_UNICODE_COMBINING_MARK
+#endif
+
 /* The Unicode standard recommends that lonely combining characters are printed over a dotted
  * circle. If the terminal is not UTF-8, this will be replaced by a dot anyway. */
 #define BASE_CHARACTER_FOR_LONELY_COMBINING 0x25CC      /* dotted circle */
@@ -260,7 +266,7 @@ mcview_is_spacing_mark (const mcview_t * view, int c)
 {
 #ifdef HAVE_CHARSET
     if (view->utf8)
-        return g_unichar_type (c) == G_UNICODE_SPACING_MARK;
+        return g_unichar_type (c) == SPACING_MARK;
 #else
     (void) view;
     (void) c;
@@ -349,16 +355,16 @@ mcview_get_next_char (mcview_t * view, mcview_state_machine_t * state, int *c)
     if (view->utf8)
     {
         gboolean result;
-        int bytes_consumed;
+        int char_length;
 
-        *c = mcview_get_utf (view, state->offset, &bytes_consumed, &result);
+        *c = mcview_get_utf (view, state->offset, &char_length, &result);
         if (!result)
             return FALSE;
         /* Pretend EOF if we crossed force_max */
-        if (view->force_max >= 0 && state->offset + bytes_consumed > view->force_max)
+        if (view->force_max >= 0 && state->offset + char_length > view->force_max)
             return FALSE;
 
-        state->offset += bytes_consumed;
+        state->offset += char_length;
         return TRUE;
     }
 #endif /* HAVE_CHARSET */
@@ -530,7 +536,7 @@ mcview_next_combining_char_sequence (mcview_t * view, mcview_state_machine_t * s
             return i;
         if (!mcview_ismark (view, cs[i]) || !mcview_isprint (view, cs[i]))
             return i;
-        if (g_unichar_type (cs[i]) == G_UNICODE_SPACING_MARK)
+        if (g_unichar_type (cs[i]) == SPACING_MARK)
         {
             /* Only allow as the first combining char. Stop processing in either case. */
             if (i == 1)
@@ -618,7 +624,7 @@ mcview_display_line (mcview_t * view, mcview_state_machine_t * state, int row,
         }
 
         if (view->search_start <= state->offset && state->offset < view->search_end)
-            color = SELECTED_COLOR;
+            color = VIEW_SELECTED_COLOR;
 
         if (cs[0] == '\n')
         {

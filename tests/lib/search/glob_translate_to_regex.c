@@ -1,10 +1,11 @@
 /*
-   lib - tests lib/utilinux:my_system() function
+   libmc - checks for processing esc sequences in replace string
 
-   Copyright (C) 2013-2015
+   Copyright (C) 2011-2015
    Free Software Foundation, Inc.
 
    Written by:
+   Andrew Borodin <aborodin@vmail.ru>, 2011
    Slava Zanko <slavazanko@gmail.com>, 2013
 
    This file is part of the Midnight Commander.
@@ -23,45 +24,81 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define TEST_SUITE_NAME "/lib/utilunix"
+#define TEST_SUITE_NAME "lib/search/glob"
 
 #include "tests/mctest.h"
 
-#include "lib/util.h"
-#include "lib/utilunix.h"
-
-#include "utilunix__my_system-common.c"
+#include "glob.c"               /* for testing static functions */
 
 /* --------------------------------------------------------------------------------------------- */
 
+/* @DataSource("test_glob_translate_to_regex_ds") */
 /* *INDENT-OFF* */
-START_TEST (fork_child)
+static const struct test_glob_translate_to_regex_ds
+{
+    const char *input_value;
+    const char *expected_result;
+} test_glob_translate_to_regex_ds[] =
+{
+    {
+        "test*",
+        "test(.*)"
+    },
+    {
+        "t?es*t",
+        "t(.)es(.*)t"
+    },
+    {
+        "te{st}",
+        "te(st)"
+    },
+    {
+        "te{st|ts}",
+        "te(st|ts)"
+    },
+    {
+        "te{st,ts}",
+        "te(st|ts)"
+    },
+    {
+        "te[st]",
+        "te[st]"
+    },
+    {
+        "t,e.st",
+        "t,e\\.st"
+    },
+    {
+        "^t,e.+st+$",
+        "\\^t,e\\.\\+st\\+\\$"
+    },
+    {
+        "te!@#$%^&*()_+|\";:'{}:><?\\?\\*.,/[]|\\/st",
+        "te!@#\\$%\\^&(.*)\\(\\)_\\+|\";:'():><(.)\\?\\*\\.,/[]|\\/st"
+    },
+};
+/* *INDENT-ON* */
+
+/* @Test(dataSource = "test_glob_translate_to_regex_ds") */
+/* *INDENT-OFF* */
+START_PARAMETRIZED_TEST (test_glob_translate_to_regex, test_glob_translate_to_regex_ds)
 /* *INDENT-ON* */
 {
-    int actual_value;
     /* given */
-    fork__return_value = 0;
+    GString *tmp = g_string_new (data->input_value);
+    GString *dest_str;
 
     /* when */
-    actual_value = my_system (0, "/bin/some-command", "some parameter");
+    dest_str = mc_search__glob_translate_to_regex (tmp);
 
     /* then */
-    mctest_assert_int_eq (actual_value, 0);
+    g_string_free (tmp, TRUE);
 
-    VERIFY_SIGACTION_CALLS ();
-    VERIFY_SIGNAL_CALLS ();
-
-    mctest_assert_str_eq (execvp__file__captured, "/bin/some-command");
-    mctest_assert_int_eq (execvp__args__captured->len, 2);
-
-    mctest_assert_str_eq (g_ptr_array_index (execvp__args__captured, 0), "/bin/some-command");
-    mctest_assert_str_eq (g_ptr_array_index (execvp__args__captured, 1), "some parameter");
-
-    /* All exec* calls is mocked, so call to _exit() function with 127 status code it's a normal situation */
-    mctest_assert_int_eq (my_exit__status__captured, 127);
+    mctest_assert_str_eq (dest_str->str, data->expected_result);
+    g_string_free (dest_str, TRUE);
 }
 /* *INDENT-OFF* */
-END_TEST
+END_PARAMETRIZED_TEST
 /* *INDENT-ON* */
 
 /* --------------------------------------------------------------------------------------------- */
@@ -75,16 +112,14 @@ main (void)
     TCase *tc_core = tcase_create ("Core");
     SRunner *sr;
 
-    tcase_add_checked_fixture (tc_core, setup, teardown);
-
     /* Add new tests here: *************** */
-    tcase_add_test (tc_core, fork_child);
+    mctest_add_parameterized_test (tc_core, test_glob_translate_to_regex,
+                                   test_glob_translate_to_regex_ds);
     /* *********************************** */
 
     suite_add_tcase (s, tc_core);
     sr = srunner_create (s);
-    srunner_set_log (sr, "utilinux__my_system.log");
-    srunner_run_all (sr, CK_NOFORK);
+    srunner_run_all (sr, CK_NORMAL);
     number_failed = srunner_ntests_failed (sr);
     srunner_free (sr);
     return (number_failed == 0) ? 0 : 1;

@@ -1,11 +1,11 @@
 /*
-   lib/vfs - x_basename() function testing
+   libmc - checks for producing compile flags
 
    Copyright (C) 2011-2015
    Free Software Foundation, Inc.
 
    Written by:
-   Slava Zanko <slavazanko@gmail.com>, 2011, 2013
+   Slava Zanko <slavazanko@gmail.com>, 2015
 
    This file is part of the Midnight Commander.
 
@@ -23,85 +23,76 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define TEST_SUITE_NAME "/lib"
+#define TEST_SUITE_NAME "lib/search/glob"
 
 #include "tests/mctest.h"
 
-#include <stdio.h>
-
-#include "lib/strutil.h"
-#include "lib/util.h"
+#include "regex.c"              /* for testing static functions */
 
 /* --------------------------------------------------------------------------------------------- */
 
-/* @Before */
-static void
-setup (void)
-{
-}
-
-/* --------------------------------------------------------------------------------------------- */
-
-/* @After */
-static void
-teardown (void)
-{
-}
-
-/* --------------------------------------------------------------------------------------------- */
-
-/* @DataSource("test_x_basename_ds") */
+/* @DataSource("test_glob_translate_to_regex_ds") */
 /* *INDENT-OFF* */
-static const struct test_x_basename_ds
+static const struct test_regex_get_compile_flags_ds
 {
-    const char *input_value;
-    const char *expected_result;
-} test_x_basename_ds[] =
+    const char *charset;
+    const gboolean utf_flag;
+    const GRegexCompileFlags expected_result;
+} test_regex_get_compile_flags_ds[] =
 {
     {
-        "/test/path/test2/path2",
-        "path2"
+        "utf8",
+        TRUE,
+        G_REGEX_OPTIMIZE | G_REGEX_DOTALL
     },
     {
-        "/test/path/test2/path2#vfsprefix",
-        "path2#vfsprefix"
+        "utf8",
+        FALSE,
+        G_REGEX_OPTIMIZE | G_REGEX_DOTALL | G_REGEX_RAW
     },
     {
-        "/test/path/test2/path2/vfsprefix://",
-        "path2/vfsprefix://"
+        "utf-8",
+        TRUE,
+        G_REGEX_OPTIMIZE | G_REGEX_DOTALL
     },
     {
-        "/test/path/test2/path2/vfsprefix://subdir",
-        "subdir"
+        "utf-8",
+        FALSE,
+        G_REGEX_OPTIMIZE | G_REGEX_DOTALL | G_REGEX_RAW
     },
     {
-        "/test/path/test2/path2/vfsprefix://subdir/",
-        "subdir/"
+        "latin1",
+        TRUE,
+        G_REGEX_OPTIMIZE | G_REGEX_DOTALL  | G_REGEX_RAW
     },
     {
-        "/test/path/test2/path2/vfsprefix://subdir/subdir2",
-        "subdir2"
+        "latin1",
+        FALSE,
+        G_REGEX_OPTIMIZE | G_REGEX_DOTALL | G_REGEX_RAW
     },
     {
-        "/test/path/test2/path2/vfsprefix:///",
-        "/"
+        "blablabla",
+        TRUE,
+        G_REGEX_OPTIMIZE | G_REGEX_DOTALL  | G_REGEX_RAW
     },
 };
 /* *INDENT-ON* */
 
-/* @Test(dataSource = "test_x_basename_ds") */
+/* @Test(dataSource = "test_regex_get_compile_flags_ds") */
 /* *INDENT-OFF* */
-START_PARAMETRIZED_TEST (test_x_basename, test_x_basename_ds)
+START_PARAMETRIZED_TEST (test_regex_get_compile_flags, test_regex_get_compile_flags_ds)
 /* *INDENT-ON* */
 {
+    GRegexCompileFlags actual_result;
+
     /* given */
-    const char *actual_result;
+    mc_global.utf8_display = data->utf_flag;
 
     /* when */
-    actual_result = x_basename (data->input_value);
+    actual_result = mc_search__regex_get_compile_flags (data->charset);
 
     /* then */
-    mctest_assert_str_eq (actual_result, data->expected_result);
+    mctest_assert_int_eq (actual_result, data->expected_result);
 }
 /* *INDENT-OFF* */
 END_PARAMETRIZED_TEST
@@ -118,15 +109,13 @@ main (void)
     TCase *tc_core = tcase_create ("Core");
     SRunner *sr;
 
-    tcase_add_checked_fixture (tc_core, setup, teardown);
-
     /* Add new tests here: *************** */
-    mctest_add_parameterized_test (tc_core, test_x_basename, test_x_basename_ds);
+    mctest_add_parameterized_test (tc_core, test_regex_get_compile_flags,
+                                   test_regex_get_compile_flags_ds);
     /* *********************************** */
 
     suite_add_tcase (s, tc_core);
     sr = srunner_create (s);
-    srunner_set_log (sr, "x_basename.log");
     srunner_run_all (sr, CK_NORMAL);
     number_failed = srunner_ntests_failed (sr);
     srunner_free (sr);

@@ -1,11 +1,11 @@
 /*
-   lib/strutil - tests for lib/strutil/parse_integer function.
+   src/filemanager - tests for is_wildcarded() function
 
-   Copyright (C) 2013-2015
+   Copyright (C) 2011-2015
    Free Software Foundation, Inc.
 
    Written by:
-   Andrew Borodin <aborodin@vmail.ru>, 2013
+   Slava Zanko <slavazanko@gmail.com>, 2015
 
    This file is part of the Midnight Commander.
 
@@ -23,13 +23,14 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define TEST_SUITE_NAME "/lib/strutil"
+#define TEST_SUITE_NAME "/src/filemanager"
 
 #include "tests/mctest.h"
 
-#include <inttypes.h>
+#include "src/vfs/local/local.c"
 
-#include "lib/strutil.h"
+#include "src/filemanager/filegui.c"
+
 
 /* --------------------------------------------------------------------------------------------- */
 
@@ -37,6 +38,11 @@
 static void
 setup (void)
 {
+    str_init_strings (NULL);
+
+    vfs_init ();
+    init_localfs ();
+    vfs_setup_work_dir ();
 }
 
 /* --------------------------------------------------------------------------------------------- */
@@ -45,98 +51,91 @@ setup (void)
 static void
 teardown (void)
 {
+    vfs_shut ();
+    str_uninit_strings ();
 }
 
 /* --------------------------------------------------------------------------------------------- */
 
-/* @DataSource("str_replace_all_test_ds") */
+/* @DataSource("test_is_wildcarded_ds") */
 /* *INDENT-OFF* */
-static const struct parse_integer_test_ds
+static const struct test_is_wildcarded_ds
 {
-    const char *haystack;
-    uintmax_t expected_result;
-    gboolean invalid;
-} parse_integer_test_ds[] =
+    const char *input_value;
+    gboolean expected_result;
+} test_is_wildcarded_ds[] =
 {
-    {
-        /* too big */
-        "99999999999999999999999999999999999999999999999999999999999999999999",
-        0,
+    { /* 0 */
+        "blabla",
+        FALSE
+    },
+    { /* 1 */
+        "bla?bla",
         TRUE
     },
-    {
-        "x",
-        0,
+    { /* 2 */
+        "bla*bla",
         TRUE
     },
-    {
-        "9x",
-        0,
+    { /* 3 */
+        "bla\\*bla",
+        FALSE
+    },
+
+    { /* 4 */
+        "bla\\\\*bla",
         TRUE
     },
-    {
-        "1",
-        1,
-        FALSE
-    },
-    {
-        "-1",
-        0,
+    { /* 5 */
+        "bla\\1bla",
         TRUE
     },
-    {
-        "1k",
-        1024,
+    { /* 6 */
+        "bla\\\\1bla",
         FALSE
     },
-    {
-        "1K",
-        1024,
+    { /* 7 */
+        "bla\\\t\\\\1bla",
         FALSE
     },
-    {
-        "1M",
-        1024 * 1024,
-        FALSE
-    },
-    {
-        "1m",
-        0,
+    { /* 8 */
+        "bla\\\t\\\\\\1bla",
         TRUE
     },
-    {
-        "64M",
-        64 * 1024 * 1024,
+    { /* 9 */
+        "bla\\9bla",
+        TRUE
+    },
+    { /* 10 */
+        "blabla\\",
         FALSE
     },
-    {
-        "1G",
-        1 * 1024 * 1024 * 1024,
+    { /* 11 */
+        "blab\\?la",
         FALSE
-    }
+    },
+    { /* 12 */
+        "blab\\\\?la",
+        TRUE
+    },
 };
 /* *INDENT-ON* */
 
-/* @Test(dataSource = "str_replace_all_test_ds") */
+/* @Test(dataSource = "test_is_wildcarded_ds") */
 /* *INDENT-OFF* */
-START_TEST (parse_integer_test)
+START_PARAMETRIZED_TEST (test_is_wildcarded, test_is_wildcarded_ds)
 /* *INDENT-ON* */
 {
     /* given */
-    uintmax_t actual_result;
-    gboolean invalid = FALSE;
-    const struct parse_integer_test_ds *data = &parse_integer_test_ds[_i];
+    gboolean actual_result;
 
     /* when */
-    actual_result = parse_integer (data->haystack, &invalid);
-
+    actual_result = is_wildcarded (data->input_value);
     /* then */
-    fail_unless (invalid == data->invalid && actual_result == data->expected_result,
-                 "actial ( %" PRIuMAX ") not equal to\nexpected (%" PRIuMAX ")",
-                 actual_result, data->expected_result);
+    mctest_assert_int_eq (actual_result, data->expected_result);
 }
 /* *INDENT-OFF* */
-END_TEST
+END_PARAMETRIZED_TEST
 /* *INDENT-ON* */
 
 /* --------------------------------------------------------------------------------------------- */
@@ -153,13 +152,13 @@ main (void)
     tcase_add_checked_fixture (tc_core, setup, teardown);
 
     /* Add new tests here: *************** */
-    tcase_add_loop_test (tc_core, parse_integer_test, 0, G_N_ELEMENTS (parse_integer_test_ds));
+    mctest_add_parameterized_test (tc_core, test_is_wildcarded, test_is_wildcarded_ds);
     /* *********************************** */
 
     suite_add_tcase (s, tc_core);
     sr = srunner_create (s);
-    srunner_set_log (sr, "parse_integer.log");
-    srunner_run_all (sr, CK_NOFORK);
+    srunner_set_log (sr, "filegui_is_wildcarded.log");
+    srunner_run_all (sr, CK_NORMAL);
     number_failed = srunner_ntests_failed (sr);
     srunner_free (sr);
     return (number_failed == 0) ? 0 : 1;
